@@ -37,7 +37,7 @@ class Dense(nn.Module):
 class ScoreNet(nn.Module):
   """A time-dependent score-based model built upon U-Net architecture."""
 
-  def __init__(self, marginal_prob_std, channels=[32, 64, 128, 256], embed_dim=256):
+  def __init__(self, marginal_prob_std, channels=[32, 64, 128, 256], embed_dim=256, rep_embed_dim=1024):
     """Initialize a time-dependent score-based network.
 
     Args:
@@ -48,39 +48,59 @@ class ScoreNet(nn.Module):
     """
     super().__init__()
     # Gaussian random feature embedding layer for time
+    self.rep_encoder = Encoder()
     self.embed = nn.Sequential(time_step_embedding(embed_dim=embed_dim),
          nn.Linear(embed_dim, embed_dim))
     # Encoding layers where the resolution decreases
     self.conv1 = nn.Conv2d(1, channels[0], 3, stride=1, bias=False)
     self.dense1 = Dense(embed_dim, channels[0])
+    self.dense1_rep = Dense(rep_embed_dim,channels[0])
     self.gnorm1 = nn.GroupNorm(4, num_channels=channels[0])
+
     self.conv2 = nn.Conv2d(channels[0], channels[1], 3, stride=2, bias=False)
     self.dense2 = Dense(embed_dim, channels[1])
+    self.dense2_rep = Dense(rep_embed_dim,channels[1])
     self.gnorm2 = nn.GroupNorm(32, num_channels=channels[1])
+
     self.conv3 = nn.Conv2d(channels[1], channels[2], 3, stride=2, bias=False)
     self.dense3 = Dense(embed_dim, channels[2])
+    self.dense3_rep = Dense(rep_embed_dim,channels[2])
     self.gnorm3 = nn.GroupNorm(32, num_channels=channels[2])
+
     self.conv4 = nn.Conv2d(channels[2], channels[3], 3, stride=2, bias=False)
     self.dense4 = Dense(embed_dim, channels[3])
+    self.dense4_rep = Dense(rep_embed_dim,channels[3])
     self.gnorm4 = nn.GroupNorm(32, num_channels=channels[3])    
 
     # Decoding layers where the resolution increases
     self.tconv4 = nn.ConvTranspose2d(channels[3], channels[2], 3, stride=2, bias=False)
     self.dense5 = Dense(embed_dim, channels[2])
+    self.dense5_rep = Dense(rep_embed_dim, channels[2])
     self.tgnorm4 = nn.GroupNorm(32, num_channels=channels[2])
+
     self.tconv3 = nn.ConvTranspose2d(channels[2] + channels[2], channels[1], 3, stride=2, bias=False, output_padding=1)    
     self.dense6 = Dense(embed_dim, channels[1])
+    self.dense6_rep = Dense(rep_embed_dim, channels[1])
     self.tgnorm3 = nn.GroupNorm(32, num_channels=channels[1])
+
     self.tconv2 = nn.ConvTranspose2d(channels[1] + channels[1], channels[0], 3, stride=2, bias=False, output_padding=1)    
     self.dense7 = Dense(embed_dim, channels[0])
+    self.dense7_rep = Dense(rep_embed_dim, channels[0])
     self.tgnorm2 = nn.GroupNorm(32, num_channels=channels[0])
+
     self.tconv1 = nn.ConvTranspose2d(channels[0] + channels[0], 1, 3, stride=1)
     
     # The swish activation function
     self.act = lambda x: x * torch.sigmoid(x)
     self.marginal_prob_std = marginal_prob_std
 
-  def forward(self, x, t): 
+  def forward(self,x,t,x0=None):
+     if x0 is not None:
+        return self.forward_train(x,t,x0)
+     else :
+        return self.forward_normal(x,t)
+  
+  def forward_normal(self, x, t): 
     # Obtain the Gaussian random feature embedding for t   
     embed = self.act(self.embed(t))    
     # Encoding path
@@ -122,7 +142,57 @@ class ScoreNet(nn.Module):
     # Normalize output
     h = h / self.marginal_prob_std(t)[:, None, None, None]
     return h
-  
+
+  def forward_train(self, x, t, x0): 
+    # Obtain the Gaussian random feature embedding for t   
+    rep_embed = self.rep_encoder(x0) ## additional idea -- use the time step embedding into the encoder architecture as well
+    embed = self.act(self.embed(t))    
+    # Encoding path
+    h1 = self.conv1(x)    
+    ## Incorporate information from t
+    h1 += self.dense1(embed)
+    h1 += self.dense1_rep(rep_embed)
+    ## Group normalization
+    h1 = self.gnorm1(h1)
+    h1 = self.act(h1)
+    h2 = self.conv2(h1)
+    h2 += self.dense2(embed)
+    h2 += self.dense2_rep(rep_embed)
+    h2 = self.gnorm2(h2)
+    h2 = self.act(h2)
+    h3 = self.conv3(h2)
+    h3 += self.dense3(embed)
+    h3 += self.dense3_rep(rep_embed)
+    h3 = self.gnorm3(h3)
+    h3 = self.act(h3)
+    h4 = self.conv4(h3)
+    h4 += self.dense4(embed)
+    h4 += self.dense4_rep(rep_embed)
+    h4 = self.gnorm4(h4)
+    h4 = self.act(h4)
+
+    # Decoding path
+    h = self.tconv4(h4)
+    ## Skip connection from the encoding path
+    h += self.dense5(embed)
+    h += self.dense5_rep(rep_embed)
+    h = self.tgnorm4(h)
+    h = self.act(h)
+    h = self.tconv3(torch.cat([h, h3], dim=1))
+    h += self.dense6(embed)
+    h += self.dense6_rep(rep_embed)
+    h = self.tgnorm3(h)
+    h = self.act(h)
+    h = self.tconv2(torch.cat([h, h2], dim=1))
+    h += self.dense7(embed)
+    h += self.dense7_rep(rep_embed)
+    h = self.tgnorm2(h)
+    h = self.act(h)
+    h = self.tconv1(torch.cat([h, h1], dim=1))
+
+    # Normalize output
+    h = h / self.marginal_prob_std(t)[:, None, None, None]
+    return h
 
 #@title Set up the SDE
 
@@ -173,7 +243,7 @@ def loss_fn(model, x, marginal_prob_std, eps=1e-5):
   z = torch.randn_like(x)
   std = marginal_prob_std(random_t)
   perturbed_x = x + z * std[:, None, None, None]
-  score = model(perturbed_x, random_t)
+  score = model(perturbed_x, random_t,x)
   loss = torch.mean(torch.sum((score * std[:, None, None, None] + z)**2, dim=(1,2,3)))
   return loss
 

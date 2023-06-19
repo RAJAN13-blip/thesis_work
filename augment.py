@@ -21,9 +21,17 @@ class Encoder(nn.Module):
         ## the required latent dimension space 
         self.flatten = nn.Flatten()
         
+        #downsampling block -- latent space 2D 
         self.dense1 = nn.Linear(1024,512)
         self.dense2 = nn.Linear(512,256)
         self.dense3 = nn.Linear(256,128)
+        self.dense4 = nn.Linear(128,2)
+        
+        #upsampling block -- coding it to higher dimensional space
+        self.up_dense1 = nn.Linear(2,128)
+        self.up_dense2 = nn.Linear(128,256)
+        self.up_dense3 = nn.Linear(256,512)
+        self.up_dense4 = nn.Linear(512,1024)
 
         #actiavtions 
         self.act = lambda x: x * torch.sigmoid(x)
@@ -49,8 +57,20 @@ class Encoder(nn.Module):
         h6 = self.act(h6)
         h7 = self.dense3(h6)
         h7 = self.act(h7)
+        h8 = self.dense4(h7)
+        h8 = self.act(h8) #the latent space
 
-        return h7
+        #encoding it to a highert dimensional space 
+        h9 = self.up_dense1(h8)
+        h9 = self.act(h9)
+        h10 = self.up_dense2(h9)
+        h10 = self.act(h10)
+        h11 = self.up_dense3(h10)
+        h11 = self.act(h11)
+        h12 = self.up_dense4(h11)
+        h12 = self.act(h12)   
+
+        return h12
 
 
 
@@ -71,3 +91,8 @@ class Encoder(nn.Module):
 
 #     def forward(self, x):
 #         pass
+
+x = torch.randn(32,1,28,28)
+model = Encoder()
+
+output = model(x)
