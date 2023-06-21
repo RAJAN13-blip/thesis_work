@@ -89,4 +89,3 @@ class minimalDiffRl(nn.Module):
         return h
 
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
