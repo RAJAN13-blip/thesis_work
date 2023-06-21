@@ -102,7 +102,7 @@ def improved_sampler(model:DiffusionNet, steps):
 
     return x_alpha
 
-
+#sampling procedure
 model = torch.nn.DataParallel(DiffusionNet())
 ckpt = torch.load('mode_28_ckpt.pth', map_location=device)
 model.load_state_dict(ckpt)

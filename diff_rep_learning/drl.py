@@ -261,6 +261,7 @@ batch_size =  32 #@param {'type':'integer'}
 lr=1e-4 #@param {'type':'number'}
 
 
+#Training procedure for the given model 
 dataset = MNIST('.', train=True, transform=transforms.ToTensor(), download=True)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
