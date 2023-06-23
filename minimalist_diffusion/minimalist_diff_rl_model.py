@@ -90,3 +90,9 @@ class minimalDiffRl(nn.Module):
         return h
 
 
+class advancedMinimalist_drl(nn.Module):
+   def __init__(self):
+      pass
+
+   def forward(self,x,alpha):
+      pass
