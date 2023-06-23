@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from minimalist_diff_model import DiffusionNet
-
+# from ..diff_rep_learning.augment import Encoder
 
 class minimalDiffRl_revised(nn.Module):
     def __init__(self):
@@ -65,3 +65,13 @@ class minimalDiffRl_revised(nn.Module):
 
 
 
+# class minimalDiffRl_with_encoder(nn.Module):
+#     def __init__(self, pretrain=True):
+#         super().__init__()
+#         self.minimal_model = minimalDiffRl_revised()
+#         self.rep_encoder = Encoder()
+
+
+#     def forward():
+
+#         pass

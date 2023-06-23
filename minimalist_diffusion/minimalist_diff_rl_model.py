@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from minimalist_diff_model import DiffusionNet
+# from ..diff_rep_learning.augment import Encoder
 
 class alpha_step_embedding(nn.Module):
    def __init__(self,embed_dim):
