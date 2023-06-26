@@ -96,3 +96,9 @@ class advancedMinimalist_drl(nn.Module):
 
    def forward(self,x,alpha):
       pass
+
+
+# model = minimalDiffRl()
+# x = torch.randn(32,1,28,28)
+# y = torch.randn(32)
+# o = model(x,y)
