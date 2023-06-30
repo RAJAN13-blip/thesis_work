@@ -71,7 +71,7 @@ class diffusion_model(nn.Module):
         # h6 = nn.BatchNorm(use_running_average= not self.train)(h6)
         return h6
     
-rng = random.seed(0)
+rng = jax.random.PRNGKey(0)
 fake_input = jnp.ones((1,2))
 fake_alpha = jnp.ones(1)
 score_model = diffusion_model()
