@@ -2,7 +2,7 @@ import torch
 import torchvision
 from torchvision import transforms
 from tqdm import tqdm
-from diffusers import UNet2DModel
+from diffusers import UNet2DModel # pip install diffusers
 from torch.optim import Adam
 
 def get_model():
@@ -43,7 +43,7 @@ ROOT_FOLDER = '.'
 transform_cifar = transforms.Compose([transforms.Resize(64),transforms.CenterCrop(64), transforms.RandomHorizontalFlip(0.5),transforms.ToTensor()]) 
 transform_mnist = transforms.Compose([transforms.Resize(64), transforms.ToTensor()])
 train_dataset = torchvision.datasets.MNIST(root=ROOT_FOLDER,
-                                        download=False, transform=transform_cifar if dataset=='cifar' else transform_mnist)
+                                        download=True, transform=transform_cifar if dataset=='cifar' else transform_mnist)
 
 dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=0, drop_last=True)
 
@@ -63,6 +63,7 @@ for current_epoch in tqdm(range(1000),"Epoch"):
         x0 = torch.randn_like(x1)
         bs = x0.shape[0]
 
+        """Putting same x0 and x1 for different alphas -- modified training pipeline """
         alpha = torch.rand(bs*3, device=device)
         alpha_1 = alpha[0:bs]
         alpha_2 = alpha[0+bs:bs+bs]
@@ -72,7 +73,6 @@ for current_epoch in tqdm(range(1000),"Epoch"):
         x_alpha_2 = alpha_2.view(-1,1,1,1) * x1 + (1-alpha_2).view(-1,1,1,1) * x0
         x_alpha_3 = alpha_3.view(-1,1,1,1) * x1 + (1-alpha_3).view(-1,1,1,1) * x0
 
-        # x_alpha = alpha.view(-1,1,1,1) * x1 + (1-alpha).view(-1,1,1,1) * x0
 
         for i in range(bs):
             x_alpha = torch.concatenate([x_alpha_1[i][None, :,:,:], x_alpha_2[i][None,:,:,:], x_alpha_3[i][None,:,:,:]], dim=0)
@@ -88,9 +88,21 @@ for current_epoch in tqdm(range(1000),"Epoch"):
 
         nb_iter += 1
         num_items +=1
+ 
+        """Uncomment these lines for normal training pipeline and comment the ones above -- refer authors code at https://github.com/tchambon/IADB/blob/main/iadb.py"""
+
+        # alpha = torch.rand(bs, device=device)
+        # x_alpha = alpha.view(-1,1,1,1) * x1 + (1-alpha).view(-1,1,1,1) * x0
         
         # d = model(x_alpha, alpha)['sample']
         # loss = torch.sum((d - (x1-x0))**2)
+
+        # optimizer.zero_grad()
+        # loss.backward()
+        # optimizer.step()
+        # nb_iter += 1
+        # num_items +=1
+        # avg_loss += loss.item()
 
         if nb_iter % 200 == 0:
             with torch.no_grad():
