@@ -23,12 +23,12 @@ class Dense(nn.Module):
 
 # sampling loop
 @torch.no_grad()
-def sample_IADB(D,VAE,  period):
+def sample_IADB(D,VAE,  period, latent_dims=2):
     # starting points x_alpha = x_0
     batchsize = 64
     x_0 = torch.randn(batchsize, 1, 32, 32, device="cuda")
     x_alpha = x_0
-    embedding = torch.randn(batchsize, 2, device='cuda')
+    embedding = torch.randn(batchsize, latent_dims, device='cuda')
 
     # loop
     T = 128
@@ -49,7 +49,7 @@ def sample_IADB(D,VAE,  period):
                 tmp = np.swapaxes(tmp, 0, 2)
                 tmp = np.swapaxes(tmp, 0, 1)
                 result[32*i:32*i+32, 32*j:32*j+32, :] = tmp          
-        saveImage('/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/samples/generated_mnist_'+str(t)+'_'+str(period)+'_.png', result)
+    saveImage('/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/samples/generated_mnist_'+str(t)+'_'+str(period)+'_.png', result)
 
 class Unet(torch.nn.Module):
     def __init__(self,embedding_dim=1024):

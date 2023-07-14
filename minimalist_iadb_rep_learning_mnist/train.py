@@ -19,15 +19,16 @@ dataset = torchvision.datasets.MNIST('.', train=True, download=False,
                             ]))
 dataloader = DataLoader(dataset, batch_size=batchsize, num_workers=4, drop_last=True, shuffle=True)   
 
-
+latent_dims = 5
 D = Unet().to('cuda')
-VAE = VariationalEncoder(latent_dims=2).to('cuda')
+VAE = VariationalEncoder(latent_dims=latent_dims).to('cuda')
 optimizer_DVAE = torch.optim.Adam(list(D.parameters())+ list(VAE.parameters()), lr=0.0005)
-
-loss_kl = []
-loss_d = []
+gamma = 1.001
+loss_kl_list = []
+loss_d_list = []
+num_epochs = 50
 # training loop
-for period in range(200):
+for period in range(num_epochs):
     avg_kl_loss = 0
     avg_d_loss = 0
     num_items = 0
@@ -45,7 +46,7 @@ for period in range(200):
         x_alpha = (1-alpha[:,None,None,None]) * x_0 + alpha[:,None,None,None] * x_1
 
         #
-        loss = torch.sum( (D(x_alpha, alpha,embed) - (x_1-x_0))**2 ) + VAE.encoder.kl
+        loss = torch.sum( (D(x_alpha, alpha,embed) - (x_1-x_0))**2 ) + (gamma)*VAE.encoder.kl
         loss_kl = VAE.encoder.kl
         loss_d = loss.item() - loss_kl
 
@@ -59,15 +60,15 @@ for period in range(200):
 
     avg_kl_loss /= num_items
     avg_d_loss /= num_items
-    loss_kl.append(avg_kl_loss)
-    loss_d.append(avg_d_loss)
+    loss_kl_list.append(avg_kl_loss.item())
+    loss_d_list.append(avg_d_loss.item())
 
-    if period%50 == 0:
-        torch.save(VAE.state_dict(), f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/vae_{period}.ckpt')
-        torch.save(D.state_dict(),f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/d_{period}.ckpt')
-        sample_IADB(D,VAE, period)
+    if period%10 == 0 or period==num_epochs-1:
+        torch.save(VAE.state_dict(), f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/vae_{period}_{gamma}_{latent_dims}.ckpt')
+        torch.save(D.state_dict(),f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/d_{period}_{gamma}_{latent_dims}.ckpt')
+        sample_IADB(D,VAE, period, latent_dims=latent_dims)
 
 
-plt.plot(loss_kl)
-plt.plot(loss_d)
+plt.plot(loss_kl_list)
+plt.plot(loss_d_list)
 plt.show()
