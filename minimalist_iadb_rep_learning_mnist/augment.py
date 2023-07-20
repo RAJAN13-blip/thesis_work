@@ -59,7 +59,7 @@ class Encoder(nn.Module):
         # h8 = self.act(h8) #the latent space
         sigma = torch.exp(self.dense5(h7) )#sigma
         z = mu + sigma*self.N.sample(mu.shape)
-        self.kl = torch.sum((sigma**2 + mu**2 - torch.log(sigma) - 1/2))
+        self.kl = torch.sum(((sigma**2 + mu**2)/2 - torch.log(sigma) + torch.log(torch.tensor(2.0, device='cuda'))- 1/2))
         return z
 
 

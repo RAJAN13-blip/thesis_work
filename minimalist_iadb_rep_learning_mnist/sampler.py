@@ -15,10 +15,10 @@ from tsnecuda import TSNE
 D = Unet()
 latent_dims = 5
 VAE = VariationalEncoder(latent_dims=latent_dims)
-epoch = 30
-gamma = 1.001
-ckpt_d = D.load_state_dict(torch.load(f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/d_{epoch}_{gamma}_{latent_dims}.ckpt'))
-ckpt_vae = VAE.load_state_dict(torch.load(f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/vae_{epoch}_{gamma}_{latent_dims}.ckpt'))
+epoch = 49
+gamma = 0
+ckpt_d = D.load_state_dict(torch.load(f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/d_epoch{epoch}_gamma{gamma}_ld{latent_dims}.ckpt'))
+ckpt_vae = VAE.load_state_dict(torch.load(f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/vae_epoch{epoch}_gamma{gamma}_ld{latent_dims}.ckpt'))
 D = D.to('cuda')
 VAE = VAE.to('cuda')
 
@@ -53,7 +53,7 @@ def plot_tsne_latent(autoencoder, data, num_batches = 100):
     latent = np.array(latent_mnist)
     target = np.array(target)
     X = TSNE(n_components=2, perplexity = 50, learning_rate=20).fit_transform(latent)
-    
+
     
     data = np.vstack((X.T, target)).T
     df = pd.DataFrame(data=data, columns=["z1", "z2", "label"])

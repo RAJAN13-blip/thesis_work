@@ -23,7 +23,7 @@ latent_dims = 5
 D = Unet().to('cuda')
 VAE = VariationalEncoder(latent_dims=latent_dims).to('cuda')
 optimizer_DVAE = torch.optim.Adam(list(D.parameters())+ list(VAE.parameters()), lr=0.0005)
-gamma = 1.001
+gamma = 0
 loss_kl_list = []
 loss_d_list = []
 num_epochs = 50
@@ -64,8 +64,8 @@ for period in range(num_epochs):
     loss_d_list.append(avg_d_loss.item())
 
     if period%10 == 0 or period==num_epochs-1:
-        torch.save(VAE.state_dict(), f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/vae_{period}_{gamma}_{latent_dims}.ckpt')
-        torch.save(D.state_dict(),f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/d_{period}_{gamma}_{latent_dims}.ckpt')
+        torch.save(VAE.state_dict(), f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/vae_epoch{period}_gamma{gamma}_ld{latent_dims}.ckpt')
+        torch.save(D.state_dict(),f'/home/rajan/Desktop/rajan_thesis/thesis_work/minimalist_iadb_rep_learning_mnist/checkpoints/d_epoch{period}_gamma{gamma}_ld{latent_dims}.ckpt')
         sample_IADB(D,VAE, period, latent_dims=latent_dims)
 
 
